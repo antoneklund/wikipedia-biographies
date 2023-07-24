@@ -1,0 +1,8 @@
+__pycache__/
+data/
+dumps/
+wiki_data/
+old_*
+test_mwparser.py
+*~
+*.json
