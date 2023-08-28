@@ -1,13 +1,18 @@
 '''Argument parser for cleaning the wikibios dataset.
     Example usage:
-
+    Extracting and cleaning
     python main.py -p dumps/enwiki-20221220ms24.xml -s wiki_data/enwiki-20221220.json -l english
+    
+    Statistics
+    python main.py --statistics -s enwiki-20221220.json -l english
+    
 '''
 
 import re
 from process_xml import process_xml
 from argparse import ArgumentParser
 from regex_patterns import regex_patterns_by_language
+from basic_statistics import basic_statistics
 
 
 ARG_PARSER = ArgumentParser(
@@ -60,10 +65,21 @@ ARG_PARSER.add_argument(
     ),
 )
 
+ARG_PARSER.add_argument(
+    "-stats",
+    "--statistics",
+    action="store_true",
+    help=(
+        "If flag set, then the statistics calculation will run from the save path of the json. \n"
+        "Example usage: python main.py --statistics -s enwiki-20221220.json -l english"
+    ),
+)
 
 def main():
     args = ARG_PARSER.parse_args()
-
+    if args.statistics:
+        basic_statistics(args.save_path, args.language)
+        return
     if args.custom_regex:
         biography_regex_pattern = re.compile(args.custom_regex)
     else:

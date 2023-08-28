@@ -6,3 +6,4 @@ old_*
 test_mwparser.py
 *~
 *.json
+wiki_data.zip
