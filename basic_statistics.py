@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from tqdm import tqdm
 import jieba
@@ -5,69 +6,77 @@ import matplotlib.pyplot as plt
 import re
 import numpy as np
 import seaborn as sns
+from json_operations import sample_from_multiple_json
 
 
-def basic_statistics(path_to_jsons, language='en'):
+def basic_statistics(path_to_jsons, number_json_files, language='en', plot=True):
     '''Loop through all the json and gather statistics for the corpus.
     '''
-    print("BASIC STATISTICS FOR ", language, ' BIOGRAPHIES.')
-    json_sample, total_nr_biographies, mean_nr_categories, \
-    nr_char, mean_nr_char, std_nr_char, nr_words, \
-    mean_nr_words, std_nr_words = process_all_json(path_to_jsons, language_is_Chinese=False)
-    plot_word_char_histogram(mean_nr_char, std_nr_char, mean_nr_words, std_nr_words, language)
-    plot_word_char_density(nr_char, nr_words, language)
-    # Pronoun values are manully calculated, here's an example
-    # plot_pronoun(240485, 842644, 93448, 'en')
-    print_basic_statistics(json_sample, total_nr_biographies, mean_nr_categories, mean_nr_char, mean_nr_words)
+    number_json_files = int(number_json_files)
+    tot_words, tot_char, tot_size, tot_categories = get_global_counts(path_to_jsons, number_json_files, language)
+    if plot:
+        json_sample, tot_biographies = sample_from_multiple_json(path_to_jsons, nr_samples=50000, json_file_size=50000, total_json_files=number_json_files)
+        category_counts, char_counts, word_counts = process_sample_for_plotting(json_sample, language)
+        plot_word_char_histogram(char_counts, word_counts, language)
+        plot_word_char_density(char_counts, word_counts, language)
+        # Pronoun values need to be manully calculated, here's an example
+        # plot_pronoun(feminine=240485, masculine=842644, neutral=93448, 'en')
+    print_basic_statistics(json_sample, tot_biographies, tot_words, tot_char, tot_size, tot_categories, language)
+    
+def get_global_counts(path_to_jsons, number_json_files, language):
+    tot_words = 0
+    tot_chars = 0
+    tot_categories = 0
+    tot_size = 0
+    for i in range(number_json_files):
+        corpus_batch_df = pd.read_json(path_to_jsons + "_" + str(i) + ".json")
+        tot_size += os.path.getsize(path_to_jsons + "_" + str(i) + ".json")
+        tot_categories += corpus_batch_df["categories"].apply(len).sum()
+        tot_chars += corpus_batch_df["text"].apply(len).sum()
 
+        for i, row in corpus_batch_df.iterrows():
+            # Chinese don't seperate words with spaces so jieba is required to split into words
+            if (language == "zh") or (language == "chinese"):
+                word_count = jieba.cut(row.text, cut_all=False)  # use jieba to split Chinese into words
+                tot_words += len(list(word_count))
+            else:
+                word_count = re.split('\s+', row.text)  # splitting into words for non-Chinese languages
+                tot_words += len(list(word_count))
+    return tot_words, tot_chars, tot_size, tot_categories
 
-def process_all_json(path_to_jsons, language_is_Chinese=False):
-    '''Loop through all the json and gather statistics for the corpus.
-    :param data_is_Chinese: Defult setting is False, if it is Chinese, then use jieba to make Chinese into words
-    '''
-
-    json_sample = pd.read_json(path_to_jsons)
-    total_nr_biographies = len(json_sample)
-
-    # calculate the number of categories for the corpus (shown in table 1)
-    # calculate the averaged length of the main texts of each biographies for the corpus, both in characters and words
-    # (shown in table 1 and used for generating figures later)
+def process_sample_for_plotting(json_sample, language):
     categories = json_sample['categories'].tolist()
     texts = json_sample['text'].tolist()
-    nr_categories = []
-    nr_words = []
-    nr_char = []
+    category_counts = []
+    word_counts = []
+    char_counts = []
 
     for i in tqdm(range(len(json_sample))):
-        nr_categories_i = len(categories[i])
-        nr_categories.append(nr_categories_i)
+        category_count = len(categories[i])
+        category_counts.append(category_count)
 
         text_i = texts[i]
-        nr_char.append(len(text_i))  # same for all languages to calculate the number of charactors of each text
-
-        # Chinese doesn't have spaces to seperate the words, so sometimes one character in Chinese can mean a single word
-        if not language_is_Chinese:
-            text_words = re.split('\s+', text_i)  # seperating words by spaces for languages which are not Chinese
-            nr_words.append(len(text_words))
+        char_counts.append(len(text_i))
+        
+        # Chinese don't seperate words with spaces so jieba is required to split into words
+        if (language == "zh") or (language == "chinese"):
+            word_count = jieba.cut(text_i, cut_all=False)  # use jieba to split Chinese into words
+            word_counts.append(len(list(word_count)))
         else:
-            text_words = jieba.cut(text_i,
-                                   cut_all=False)  # use jieba to cut Chinese into words, cutting mode can be different
-            nr_words.append(len(list(text_words)))
+            word_count = re.split('\s+', text_i)  # splitting into words for non-Chinese languages
+            word_counts.append(len(word_count))
 
-    mean_nr_categories = np.mean(nr_categories)
-    std_nr_categories = round(np.std(nr_categories), 2)
-
-    mean_nr_words = np.mean(nr_words)
-    std_nr_words = round(np.std(nr_words), 2)
-    mean_nr_char = np.mean(nr_char)
-    std_nr_char = round(np.std(nr_char), 2)
-
-    return json_sample, total_nr_biographies, mean_nr_categories, nr_char, mean_nr_char, std_nr_char, nr_words, mean_nr_words, std_nr_words
+    return category_counts, char_counts, word_counts
 
 
-def plot_word_char_histogram(mean_nr_char, std_nr_char, mean_nr_words, std_nr_words, language):
+def plot_word_char_histogram(char_counts, word_counts, language):
     '''Figure 1 (a) : Histogram of averaged number of characters/words per biography
     '''
+    mean_nr_words = np.mean(word_counts)
+    std_nr_words = round(np.std(word_counts), 2)
+    mean_nr_char = np.mean(char_counts)
+    std_nr_char = round(np.std(char_counts), 2)
+    
     plt.figure(figsize=(10, 8), dpi=200)
     ax = plt.axes()
     plt.grid(axis='y', c='#d2c9eb', linestyle='--', zorder=0)
@@ -159,15 +168,20 @@ def plot_pronoun(feminine, masculine, neutral, language):
     return None
 
 
-def print_basic_statistics(json_sample, total_nr_biographies, mean_nr_categories, mean_nr_char, mean_nr_words):
+def print_basic_statistics(json_sample, tot_biographies, tot_words, tot_char, tot_size, tot_categories, language):
     '''Print the statistics.
     '''
+    print("BASIC STATISTICS FOR ", language, ' BIOGRAPHIES.')
+    print(f"Total nr of biographies: {tot_biographies}")
+    print(f"Total size of the data: {tot_size}")
+    print(f"Total number of words: {tot_words}")
+    print(f"Total number of chars: {tot_char}")
+    print(f"Total number of categories: {tot_categories}")
+    print(f"Average number of words per biography: {tot_words/tot_biographies}")
+    print(f"Average number of characters per biography: {tot_char/tot_biographies}")
+    print(f"Average number of categories per biography: {tot_categories/tot_biographies}")
     pd.set_option('display.max_columns', None)
-    print(f"A taste of corpus: \n {json_sample[:5]}\n")
-    print(f"Total nr of biographies: {total_nr_biographies}")
-    print(f"Average number of categories per biography: {mean_nr_categories}")
-    print(f"Average number of characters per biography: {mean_nr_char}")
-    print(f"Average number of words per biography: {mean_nr_words}")
+    print(f"A sample of the corpus: \n {json_sample[:5]}\n")
 
 
 # basic_statistics('./english_sample_long.json', 'en')

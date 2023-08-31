@@ -18,7 +18,7 @@ Presented at the 2023 RANLP conference.
     ```
     where ``enwiki-20230401ms24.xml`` is the English Wikipedia dump and should be changed to the recently downloaded dump. The input ``english`` should be changed to the language chosen.
 
-    __note__ There will most likely be multiple json-files. The default is to have batches of 50'000.
+    __note__ Due to memory limitations there will most likely be multiple json-files. The default is to have batches of 50'000.
 
 
 ### Basic statistics
