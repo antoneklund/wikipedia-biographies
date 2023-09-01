@@ -50,7 +50,7 @@ ARG_PARSER.add_argument(
 ARG_PARSER.add_argument(
     "-mc",
     "--min-characters",
-    default=0,
+    default=1000,
     help=(
         "Set a min_characters. Only adds articles longer than min_characters"
     ),
@@ -71,14 +71,23 @@ ARG_PARSER.add_argument(
     action="store_true",
     help=(
         "If flag set, then the statistics calculation will run from the save path of the json. \n"
-        "Example usage: python main.py --statistics -s enwiki-20221220.json -l english"
+        "Example usage: python main.py --statistics -s enwiki-20221220.json --nr_files 25 -l english"
+    ),
+)
+
+ARG_PARSER.add_argument(
+    "-nrf",
+    "--nr_files",
+    default=1,
+    help=(
+        "Give the number of json files in the path. \n"
     ),
 )
 
 def main():
     args = ARG_PARSER.parse_args()
     if args.statistics:
-        basic_statistics(args.save_path, args.language)
+        basic_statistics(args.save_path, args.nr_files, args.language)
         return
     if args.custom_regex:
         biography_regex_pattern = re.compile(args.custom_regex)
