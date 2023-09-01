@@ -171,6 +171,8 @@ def plot_pronoun(feminine, masculine, neutral, language):
 def print_basic_statistics(json_sample, tot_biographies, tot_words, tot_char, tot_size, tot_categories, language):
     '''Print the statistics.
     '''
+    pd.set_option('display.max_columns', None)
+    print(f"A sample of the corpus: \n {json_sample[:5]}\n")
     print("BASIC STATISTICS FOR ", language, ' BIOGRAPHIES.')
     print(f"Total nr of biographies: {tot_biographies}")
     print(f"Total size of the data: {tot_size}")
@@ -180,8 +182,6 @@ def print_basic_statistics(json_sample, tot_biographies, tot_words, tot_char, to
     print(f"Average number of words per biography: {tot_words/tot_biographies}")
     print(f"Average number of characters per biography: {tot_char/tot_biographies}")
     print(f"Average number of categories per biography: {tot_categories/tot_biographies}")
-    pd.set_option('display.max_columns', None)
-    print(f"A sample of the corpus: \n {json_sample[:5]}\n")
 
 
 # basic_statistics('./english_sample_long.json', 'en')
